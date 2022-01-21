@@ -19,13 +19,13 @@ type File struct {
 	Content string `json:"content"`
 }
 
-type GistRequestParams struct {
+type gistRequestParams struct {
 	Files       map[string]File
 	Description string
 	Public      bool
 }
 
-func CreateGist(p *GistRequestParams) {
+func CreateGist(p *gistRequestParams) {
 	r := GistRequest{
 		p.Files,
 		p.Description,
@@ -67,4 +67,43 @@ func CreateGist(p *GistRequestParams) {
 
 	fmt.Printf("body: %v", data)
 	fmt.Printf("status code: %v", res.StatusCode)
+}
+
+func EditGist(p *gistRequestParams) {
+	gr := GistRequest{
+		p.Files,
+		p.Description,
+		p.Public,
+	}
+
+	json, err := json.Marshal(gr)
+	if err != nil {
+		fmt.Printf("couldn't marshal request struct: %v", err)
+		return
+	}
+
+	req, err := http.NewRequest(
+		http.MethodPatch,
+		"",
+		bytes.NewBuffer(json),
+	)
+	if err != nil {
+		fmt.Printf("couldn't create request object: %v", err)
+		return
+	}
+
+	c := NewClient(1)
+	res, err := c.client.Do(req)
+	if err != nil {
+		fmt.Printf("client couldn't send request: %v", err)
+		return
+	}
+	defer res.Body.Close()
+
+	data, err := ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("error reading response body: %v", err)
+	}
+	fmt.Printf("body: %v", data)
+	fmt.Printf("status: %v", res.StatusCode)
 }
