@@ -19,13 +19,23 @@ type File struct {
 	Content string `json:"content"`
 }
 
-type gistRequestParams struct {
+type CreateGistParams struct {
+	Files       map[string]File
+	Description string
+	Public      bool
+}
+type EditGistParams struct {
+	ID          string
 	Files       map[string]File
 	Description string
 	Public      bool
 }
 
-func CreateGist(p *gistRequestParams) {
+type DeleteGistParams struct {
+	ID string
+}
+
+func CreateGist(c *APIClient, p *CreateGistParams) {
 	r := GistRequest{
 		p.Files,
 		p.Description,
@@ -49,9 +59,8 @@ func CreateGist(p *gistRequestParams) {
 	}
 
 	req.Header.Add("accept", "application/json")
-	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("API_KEY")))
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("TOKEn")))
 
-	c := NewClient(1)
 	res, err := c.client.Do(req)
 	if err != nil {
 		fmt.Printf("couldn't send request: %v", err)
@@ -69,7 +78,7 @@ func CreateGist(p *gistRequestParams) {
 	fmt.Printf("status code: %v", res.StatusCode)
 }
 
-func EditGist(p *gistRequestParams) {
+func EditGist(c *APIClient, p *EditGistParams) {
 	gr := GistRequest{
 		p.Files,
 		p.Description,
@@ -84,7 +93,7 @@ func EditGist(p *gistRequestParams) {
 
 	req, err := http.NewRequest(
 		http.MethodPatch,
-		"",
+		fmt.Sprintf("https://api.github.com/gists/%s", p.ID),
 		bytes.NewBuffer(json),
 	)
 	if err != nil {
@@ -92,7 +101,9 @@ func EditGist(p *gistRequestParams) {
 		return
 	}
 
-	c := NewClient(1)
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %s", os.Getenv("TOKEN")))
+
 	res, err := c.client.Do(req)
 	if err != nil {
 		fmt.Printf("client couldn't send request: %v", err)
@@ -106,4 +117,33 @@ func EditGist(p *gistRequestParams) {
 	}
 	fmt.Printf("body: %v", data)
 	fmt.Printf("status: %v", res.StatusCode)
+}
+
+func DeleteGist(c *APIClient, p *DeleteGistParams) {
+	req, err := http.NewRequest(
+		http.MethodDelete,
+		fmt.Sprintf("https://api.github.com/gists/%s", p.ID),
+		nil,
+	)
+	if err != nil {
+		fmt.Printf("couldn't create request object: %v", err)
+		return
+	}
+
+	req.Header.Add("accept", "application/json")
+	req.Header.Add("Authorization", fmt.Sprintf("Bearer %v", os.Getenv("TOKEN")))
+
+	res, err := c.client.Do(req)
+	if err != nil {
+		fmt.Printf("client couldn't send request: %v", err)
+		return
+	}
+
+	_, err = ioutil.ReadAll(res.Body)
+	if err != nil {
+		fmt.Printf("error reading response body; %v", err)
+		return
+	}
+	fmt.Printf("status: %v", res.StatusCode)
+
 }
